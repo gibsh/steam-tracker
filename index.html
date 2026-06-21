@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Steam Wishlist Tracker</title>
+<style>
+:root{
+  --bg:#16171b;
+  --color-background-primary:#1d1f25;
+  --color-background-secondary:#272a32;
+  --color-text-primary:#e9e7e2;
+  --color-text-secondary:#9b9a93;
+  --color-border-secondary:#3c404a;
+  --color-border-tertiary:#2e323b;
+  --border-radius-lg:12px;
+  --border-radius-md:8px;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--bg);font-family:"Segoe UI",system-ui,-apple-system,sans-serif;color:var(--color-text-primary);padding:1.25rem;max-width:1100px;margin-inline:auto;}
+h1{font-size:18px;font-weight:600;margin:0 0 .25rem;}
+.subtitle{font-size:12px;color:var(--color-text-secondary);margin:0 0 1rem;}
+.sg{display:grid;grid-template-columns:repeat(auto-fit,minmax(108px,1fr));gap:7px;margin-bottom:1rem;}
+.metric{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:.55rem .8rem;}
+.ml{font-size:10px;color:var(--color-text-secondary);margin-bottom:1px;}
+.mv{font-size:17px;font-weight:500;color:var(--color-text-primary);}
+.topbar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:.6rem;}
+.fb{font-size:11px;padding:3px 10px;border-radius:99px;border:.5px solid var(--color-border-secondary);background:transparent;cursor:pointer;color:var(--color-text-secondary);}
+.fb.active{background:var(--color-text-primary);color:var(--color-background-primary);border-color:transparent;}
+.fb:disabled{opacity:.5;cursor:default;}
+.ssel{font-size:11px;padding:3px 7px;margin-left:auto;background:var(--color-background-secondary);color:var(--color-text-primary);border:.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);}
+.card{background:var(--color-background-primary);border:.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:.85rem 1rem;margin-bottom:8px;position:relative;}
+.pill{font-size:10px;padding:2px 7px;border-radius:99px;font-weight:500;display:inline-block;white-space:nowrap;margin:2px 2px 0 0;}
+.p-buy{background:#2c3d1a;color:#a4d65e;}
+.p-wait{background:#43351a;color:#e3b35a;}
+.p-watch{background:#2c2a4a;color:#a59ff0;}
+.p-none{background:var(--color-background-secondary);color:var(--color-text-secondary);}
+.p-brl{background:#2c3d1a;color:#a4d65e;}
+.p-uah{background:#43351a;color:#e3b35a;}
+.p-pkr{background:#1a3043;color:#6db4ec;}
+.grid3{display:grid;grid-template-columns:1fr 1.15fr 1fr;gap:8px;margin-top:8px;}
+@media(max-width:680px){.grid3{grid-template-columns:1fr;}}
+.sec{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:7px 9px;}
+.sec-lbl{font-size:10px;color:var(--color-text-secondary);font-weight:500;margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em;}
+.v-buy{border-left:3px solid #79a83a;}
+.v-wait{border-left:3px solid #d09a3e;}
+.v-watch{border-left:3px solid #7a72d6;}
+.v-free{border-left:3px solid #5d8f2c;}
+.reg-row{display:flex;align-items:center;font-size:11px;padding:2px 0;gap:6px;}
+.src-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.src-live{background:#79a83a;}
+.src-man{background:var(--color-border-secondary);}
+.atl-bar{position:relative;height:6px;border-radius:3px;background:var(--color-border-tertiary);margin-top:5px;}
+.atl-fill{position:absolute;left:0;top:0;height:6px;border-radius:3px;}
+.atl-marker{position:absolute;top:-2px;width:2px;height:10px;border-radius:1px;background:var(--color-text-primary);}
+.status-bar{font-size:11px;color:var(--color-text-secondary);margin-bottom:.75rem;padding:6px 10px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);line-height:1.5;}
+.card-actions{position:absolute;top:10px;right:10px;display:flex;gap:4px;}
+.mini-btn{font-size:10px;padding:2px 8px;border-radius:99px;border:.5px solid var(--color-border-secondary);background:transparent;cursor:pointer;color:var(--color-text-secondary);}
+.mini-btn:hover{background:var(--color-background-secondary);}
+.edit-panel{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:10px;margin-top:8px;display:none;}
+.edit-panel.open{display:block;}
+.edit-row{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;}
+.edit-label{font-size:10px;color:var(--color-text-secondary);margin-bottom:2px;}
+.edit-input,.edit-select{font-size:12px;padding:4px 7px;border-radius:var(--border-radius-md);border:.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-primary);width:100%;}
+.save-btn{font-size:11px;padding:3px 12px;border-radius:99px;border:none;background:#5d8f2c;color:#fff;cursor:pointer;margin-right:6px;}
+.del-btn{font-size:11px;padding:3px 12px;border-radius:99px;border:.5px solid #c05050;background:transparent;color:#d77;cursor:pointer;}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;z-index:100;align-items:center;justify-content:center;}
+.modal-bg.open{display:flex;}
+.modal{background:var(--color-background-primary);border-radius:var(--border-radius-lg);padding:1.25rem;width:min(480px,92vw);max-height:90vh;overflow-y:auto;border:.5px solid var(--color-border-secondary);}
+.modal h3{font-size:14px;font-weight:500;color:var(--color-text-primary);margin:0 0 1rem;}
+.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.modal-full{grid-column:1/-1;}
+.spin{display:inline-block;width:11px;height:11px;border:2px solid var(--color-border-tertiary);border-top-color:var(--color-text-primary);border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px;margin-right:5px;}
+@keyframes sp{to{transform:rotate(360deg);}}
+.rank-badge{font-size:10px;font-weight:600;color:var(--color-text-secondary);background:var(--color-background-secondary);border-radius:99px;padding:1px 7px;margin-right:4px;}
+a{color:#6db4ec;}
+.footnote{font-size:10px;color:var(--color-text-secondary);margin-top:.75rem;line-height:1.5;}
+@media (prefers-reduced-motion: reduce){.spin{animation:none;}}
+</style>
+</head>
+<body>
+
+<h1>Steam Wishlist Tracker</h1>
+<p class="subtitle">Live regional prices · Brazil / Pakistan (SASIA-USD) / Ukraine · ranked by discount · data saved in this browser</p>
+
+<div class="status-bar" id="statusBar">Loading saved wishlist…</div>
+
+<div class="sg" id="sg"></div>
+
+<div class="topbar">
+  <button class="fb" id="refreshAllBtn" onclick="refreshAll()">↻ Refresh live prices</button>
+  <button class="fb" onclick="openAddModal()">+ Add game</button>
+  <span id="refreshStatus" style="font-size:11px;color:var(--color-text-secondary);"></span>
+</div>
+
+<div class="topbar" id="filterbar">
+  <button class="fb active" onclick="sf('all',this)">All</button>
+  <button class="fb" onclick="sf('buy',this)">🟢 Buy now</button>
+  <button class="fb" onclick="sf('wait',this)">🟡 Wait</button>
+  <button class="fb" onclick="sf('watch',this)">🟣 Watch Epic</button>
+  <button class="fb" onclick="sf('free',this)">✅ Check Epic</button>
+  <select class="ssel" onchange="ssort(this.value)">
+    <option value="deal">Sort: recommended (best discount)</option>
+    <option value="cheapest">Sort: cheapest first</option>
+    <option value="savings">Sort: biggest regional savings</option>
+    <option value="verdict">Sort: by verdict</option>
+    <option value="name">Sort: A–Z</option>
+  </select>
+</div>
+
+<div id="gl"></div>
+
+<p class="footnote">
+  Recommended rank = current discount depth, boosted when the price is at or near its all-time low. 🟢 = live from Steam · ⚪ = manual estimate. ATL values are from SteamDB history (editable per card). Verify on SteamDB before buying. Using another region's account may violate Steam ToS. Data is stored in this browser's localStorage — clearing site data resets the list.
+</p>
+
+<div class="modal-bg" id="addModal">
+  <div class="modal">
+    <h3>Add a game</h3>
+    <div class="modal-grid">
+      <div class="modal-full"><div class="edit-label">Game name</div><input class="edit-input" id="add-name" placeholder="e.g. Hades II"></div>
+      <div class="modal-full"><div class="edit-label">Steam App ID (from SteamDB) — enables live fetch</div><input class="edit-input" id="add-appid" type="number" placeholder="e.g. 1145350"></div>
+      <div><div class="edit-label">US price now ($)</div><input class="edit-input" id="add-usnow" type="number" step="0.01" placeholder="29.99"></div>
+      <div><div class="edit-label">US base price ($)</div><input class="edit-input" id="add-usbase" type="number" step="0.01" placeholder="29.99"></div>
+      <div><div class="edit-label">All-time low ($)</div><input class="edit-input" id="add-atl" type="number" step="0.01"></div>
+      <div><div class="edit-label">ATL discount (%)</div><input class="edit-input" id="add-atldisc" type="number"></div>
+      <div><div class="edit-label">Verdict</div>
+        <select class="edit-select" id="add-verdict">
+          <option value="wait">🟡 Wait for sale</option>
+          <option value="buy">🟢 Buy now</option>
+          <option value="watch">🟣 Watch Epic</option>
+          <option value="free">✅ Check Epic library</option>
+        </select>
+      </div>
+      <div><div class="edit-label">Publisher opted into SASIA-USD?</div>
+        <select class="edit-select" id="add-sasia"><option value="no">No (PK = US price)</option><option value="yes">Yes</option></select>
+      </div>
+      <div class="modal-full"><div class="edit-label">Epic / free history note</div><input class="edit-input" id="add-epic" placeholder="No Epic history"></div>
+      <div class="modal-full"><div class="edit-label">Next sale prediction</div><input class="edit-input" id="add-nextsale" placeholder="Summer Sale — expect 50% off"></div>
+      <div class="modal-full"><div class="edit-label">Action / strategy</div><input class="edit-input" id="add-action" placeholder="Wait for Summer Sale."></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:1rem;">
+      <button class="save-btn" onclick="addGame()">Add (fetches live prices if App ID set)</button>
+      <button class="del-btn" onclick="closeAddModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- storage shim (localStorage, replacing Claude artifact storage) ---------- */
+const storage = {
+  async get(k){ const v=localStorage.getItem(k); if(v===null) throw new Error('not found'); return {value:v}; },
+  async set(k,v){ localStorage.setItem(k,v); return {key:k}; }
+};
+
+/* ---------- defaults & state ---------- */
+const DEF_RATES = { BRL: 5.37, UAH: 44.35, PKR: 278.3, src: 'cached (Jun 6)', at: null };
+
+const SEED = [
+ [1,"Hogwarts Legacy",990080,8.99,59.99,5.99,90,"free",false,45.49,8.99,239,"Free on Epic Dec 2025 + May 2026","ATL is 90% ($5.99) — Summer Sale could hit it.","Check Epic library first — free twice. If not owned, Ukraine beats US."],
+ [2,"Kingdom Come: Deliverance II",1771300,29.99,59.99,29.99,50,"buy",false,179.90,29.99,1199,"No Epic history (KCD1 was free Jan 2025)","Deep Silver discounts slowly — near 2026 floor.","50% on a 2025 release is good value. Ukraine cheapest. Buy now."],
+ [3,"HITMAN World of Assassination",1847520,27.99,69.99,13.99,80,"buy",false,149.90,27.99,999,"No Epic history","Summer Sale may push to 75–80% (~$14–18).","60% is solid. Ukraine cheapest. Summer Sale could go deeper."],
+ [4,"Assassin's Creed Shadows",2971460,34.99,69.99,34.99,50,"wait",false,219.90,34.99,1399,"No Epic history","Autumn Sale 2026 — expect 60–70% off (~$21–28).","Ubisoft will go deeper. Autumn Sale 2026 is the target."],
+ [5,"STAR WARS Jedi: Survivor",1774580,69.99,69.99,17.49,75,"wait",false,269.90,69.99,1749,"No Epic history","Summer Sale ~3 weeks — 50–60% off (~$28–35).","Summer Sale almost certain to bring 50–60% off. Ukraine cheapest."],
+ [6,"Star Wars Outlaws",2161700,69.99,69.99,34.99,50,"wait",false,249.90,69.99,1599,"No Epic history","Summer Sale — likely 40–50% off (~$35–42).","Ubisoft will discount at Summer Sale. Ukraine cheapest."],
+ [7,"Marvel's Spider-Man Remastered",1817070,59.99,59.99,23.99,60,"watch",false,179.90,59.99,1099,"No Epic history yet — Sony PC ports trending that way","Summer Sale — likely 40–50% off. ATL 60% ($23.99).","Watch Epic long-term. Summer Sale is next buy window. Ukraine cheapest."],
+ [8,"Ghost of Tsushima DIRECTOR'S CUT",2215430,59.99,59.99,35.99,40,"watch",false,199.90,59.99,1199,"No Epic history yet","Summer Sale — 30–40% off. Sony caps ~40%.","Sony rarely goes below 40%. Ukraine cheapest."],
+ [9,"Assassin's Creed Odyssey",812140,59.99,59.99,5.99,90,"wait",false,119.90,59.99,849,"Free on Epic 2021 — check your library","Summer Sale — 75–90% off (~$6–15).","8-year-old game. Will hit $6–15 at Summer Sale. Do not buy at full price."],
+ [10,"Assassin's Creed Black Flag Resynced",2971540,59.99,59.99,null,null,"wait",false,219.90,59.99,1399,"Unreleased Jul 10 2026","Releases July 10. First discount: Holiday 2026.","Don't buy at launch. Ukraine will be cheapest once released."],
+ [11,"ELDEN RING",1245620,59.99,59.99,35.99,40,"wait",false,209.90,59.99,1199,"Never on Epic — FromSoft doesn't do giveaways","Summer Sale — 30–40% off (~$36–42).","No free path. Summer Sale best window. Ukraine cheapest at full price."],
+ [12,"Baldur's Gate 3",1086940,59.99,59.99,47.99,20,"wait",false,249.90,59.99,1099,"Never on Epic — Larian won't","ATL only 20% off ($47.99). Ukraine is your best play.","Ukraine (~$25) is the best price you'll realistically ever get."],
+ [13,"Far Cry 6",2369390,59.99,59.99,5.99,90,"wait",false,99.90,59.99,699,"Far Cry 5 was Epic free — FC6 possible","Summer Sale — 75–90% off (~$6–15).","5-year-old Ubisoft title. Will hit $6–15 at Summer Sale."],
+ [14,"Assassin's Creed Origins",582160,59.99,59.99,5.99,90,"free",false,99.90,59.99,699,"Free on Epic 2021 — check your library","Summer Sale — 75–90% off (~$6–15).","Check Epic library first. If not owned, wait for Summer Sale."],
+ [15,"Cyberpunk 2077",1091500,59.99,59.99,23.99,60,"watch",false,149.90,59.99,999,"Witcher 3 was Epic free — Cyberpunk may follow","Summer Sale — 40–60% off (~$24–36).","Watch Epic long-term. Summer Sale next window. Ukraine cheapest."],
+ [16,"God of War",1593500,49.99,49.99,19.99,60,"watch",false,149.90,49.99,949,"No PC free history yet — Sony trend developing","Summer Sale — 40–60% off (~$20–30).","Summer Sale next buy window. Ukraine cheapest."],
+ [17,"Clair Obscur: Expedition 33",2679460,49.99,49.99,49.99,0,"wait",true,149.90,19.99,999,"No Epic history — too new (Apr 2025)","First discount likely Holiday 2026 at 20–30% off.","Pakistan SASIA-USD cheapest at $19.99 — rare case where Pakistan wins."],
+ [18,"Assassin's Creed Mirage",2627970,49.99,49.99,24.99,50,"wait",false,149.90,49.99,999,"No Epic history","Summer Sale — 50–60% off (~$20–25).","Already hit 50% once. Summer Sale likely to repeat. Ukraine cheapest."],
+ [20,"ELDEN RING NIGHTREIGN",2835570,39.99,39.99,39.99,0,"wait",false,149.90,39.99,849,"FromSoft never does Epic giveaways","First discount Holiday 2026 at 10–20% off.","No free path. Ukraine cheapest."],
+ [21,"The Witcher 3: Wild Hunt",292030,39.99,39.99,4.99,88,"free",false,79.90,39.99,549,"Free on Epic Dec 2022 — check your library","Summer Sale — 80%+ off (~$4–8).","Check Epic library — free Dec 2022. If not, Summer Sale brings $4–8."],
+ [22,"Rust",252490,39.99,39.99,19.99,50,"wait",true,119.90,15.99,749,"Facepunch never does Epic giveaways","Hits 33–50% off 1–2x/year. ATL 50% ($19.99).","Pakistan SASIA-USD cheapest at $15.99 (Facepunch opted in)."]
+];
+
+let state = { games: [], rates: {...DEF_RATES}, lastRefresh: null };
+let cf='all', cs='deal';
+
+function seedToGames(){
+  return SEED.map(r=>{
+    const [id,name,appId,usNow,usBase,atl,atlDisc,verdict,sasia,brl,pk,uah,epicNote,nextSale,action]=r;
+    return { id,name,appId,usBase,atl,atlDisc,verdict,sasiaOptIn:sasia,priority:id,epicNote,nextSale,action,
+      prices:{
+        us:{usd:usNow, local:'$'+usNow.toFixed(2), src:'manual', at:null},
+        br:{usd:+(brl/DEF_RATES.BRL).toFixed(2), local:'R$'+brl.toFixed(2), src:'manual', at:null, raw:brl},
+        pk:{usd:pk, local:'$'+pk.toFixed(2), src:'manual', at:null, raw:pk},
+        ua:{usd:+(uah/DEF_RATES.UAH).toFixed(2), local:'₴'+uah, src:'manual', at:null, raw:uah}
+      }};
+  });
+}
+
+/* ---------- persistence ---------- */
+async function loadState(){
+  try{
+    const r = await storage.get('wishlist-v3');
+    state = JSON.parse(r.value);
+    if(!state.rates) state.rates = {...DEF_RATES};
+    return;
+  }catch(e){}
+  state.games = seedToGames();
+  await saveState();
+}
+async function saveState(){
+  try{ await storage.set('wishlist-v3', JSON.stringify(state)); }catch(e){ console.error('save failed',e); }
+}
+
+/* ---------- networking with proxy fallbacks ---------- */
+async function tFetch(url, ms=10000){
+  const c=new AbortController(); const t=setTimeout(()=>c.abort(),ms);
+  try{ const r=await fetch(url,{signal:c.signal}); clearTimeout(t); return r; }
+  catch(e){ clearTimeout(t); throw e; }
+}
+async function fetchJSON(target){
+  const enc=encodeURIComponent(target);
+  const attempts=[
+    {u:target, w:false},
+    {u:'https://corsproxy.io/?url='+enc, w:false},
+    {u:'https://api.allorigins.win/raw?url='+enc, w:false},
+    {u:'https://api.codetabs.com/v1/proxy?quest='+enc, w:false},
+    {u:'https://api.allorigins.win/get?url='+enc, w:true},
+  ];
+  for(const a of attempts){
+    try{
+      const r=await tFetch(a.u);
+      if(!r.ok) continue;
+      let data;
+      if(a.w){ const j=await r.json(); data=JSON.parse(j.contents); }
+      else { data=await r.json(); }
+      if(data && typeof data==='object') return data;
+    }catch(e){}
+  }
+  return null;
+}
+
+/* ---------- live rates ---------- */
+async function fetchRates(){
+  const sources=['https://open.er-api.com/v6/latest/USD','https://api.exchangerate-api.com/v4/latest/USD'];
+  for(const s of sources){
+    const d=await fetchJSON(s);
+    const rt=d&&(d.rates||d.conversion_rates);
+    if(rt&&rt.BRL&&rt.UAH){
+      state.rates={BRL:rt.BRL,UAH:rt.UAH,PKR:rt.PKR||DEF_RATES.PKR,src:'live',at:new Date().toISOString()};
+      await saveState();
+      return true;
+    }
+  }
+  return false;
+}
+
+/* ---------- live Steam prices (batched: one call per region) ---------- */
+function convToUSD(amount, currency){
+  if(currency==='USD') return +amount.toFixed(2);
+  if(currency==='BRL') return +(amount/state.rates.BRL).toFixed(2);
+  if(currency==='UAH') return +(amount/state.rates.UAH).toFixed(2);
+  if(currency==='PKR') return +(amount/(state.rates.PKR||DEF_RATES.PKR)).toFixed(2);
+  return +amount.toFixed(2);
+}
+function applyLive(g, cc, po){
+  const amount=po.final/100;
+  const usd=convToUSD(amount, po.currency);
+  const sym=po.currency==='BRL'?'R$':po.currency==='UAH'?'₴':'$';
+  g.prices[cc]={usd, local:(po.final_formatted||sym+amount.toFixed(2)), src:'live', at:new Date().toISOString(), raw:amount, disc:po.discount_percent||0};
+  if(cc==='us'&&po.initial){ g.usBase=+(po.initial/100).toFixed(2); }
+}
+async function refreshRegion(cc, games){
+  const ids=games.filter(g=>g.appId).map(g=>g.appId).join(',');
+  if(!ids) return {ok:0,fail:0,reached:false};
+  const url='https://store.steampowered.com/api/appdetails?appids='+ids+'&cc='+cc+'&filters=price_overview';
+  const data=await fetchJSON(url);
+  if(!data) return {ok:0,fail:games.length,reached:false};
+  let ok=0,fail=0;
+  for(const g of games){
+    const entry=data[String(g.appId)];
+    const po=entry&&entry.success&&entry.data&&entry.data.price_overview;
+    if(po){ applyLive(g,cc,po); ok++; } else { fail++; }
+  }
+  return {ok,fail,reached:true};
+}
+async function refreshAll(){
+  const btn=document.getElementById('refreshAllBtn');
+  const st=document.getElementById('refreshStatus');
+  btn.disabled=true;
+  st.innerHTML='<span class="spin"></span>Fetching exchange rates…';
+  await fetchRates();
+  const regions=[['us','US'],['br','Brazil'],['pk','Pakistan'],['ua','Ukraine']];
+  let totalOk=0, unreachable=[];
+  for(let i=0;i<regions.length;i++){
+    const cc=regions[i][0], label=regions[i][1];
+    st.innerHTML='<span class="spin"></span>Fetching '+label+' prices… ('+(i+1)+'/4)';
+    const res=await refreshRegion(cc, state.games);
+    if(!res.reached) unreachable.push(label);
+    totalOk+=res.ok;
+    await new Promise(r=>setTimeout(r,400));
+  }
+  state.lastRefresh=new Date().toISOString();
+  await saveState();
+  computeAll(); buildSummary(); buildStatus(); render();
+  btn.disabled=false;
+  st.textContent = unreachable.length===4
+    ? '⚠ Steam unreachable through every proxy — showing saved/manual data.'
+    : unreachable.length
+      ? 'Done — '+totalOk+' live prices. Could not reach: '+unreachable.join(', ')+' (kept previous values).'
+      : 'Done — '+totalOk+' live prices updated.';
+}
+async function refreshGame(id){
+  const g=state.games.find(x=>x.id===id);
+  if(!g||!g.appId) return;
+  const st=document.getElementById('refreshStatus');
+  st.innerHTML='<span class="spin"></span>Refreshing '+g.name+'…';
+  let any=false;
+  for(const cc of ['us','br','pk','ua']){
+    const res=await refreshRegion(cc,[g]);
+    if(res.ok) any=true;
+    await new Promise(r=>setTimeout(r,250));
+  }
+  await saveState();
+  computeAll(); buildSummary(); buildStatus(); render();
+  st.textContent=any?g.name+' updated with live prices.':'Could not reach Steam for '+g.name+' — kept saved values.';
+}
+
+/* ---------- derived values + deal score ---------- */
+function computeAll(){
+  state.games.forEach(g=>{
+    const us=g.prices.us;
+    g.disc = (g.prices.us.src==='live'&&typeof g.prices.us.disc==='number') ? g.prices.us.disc
+           : (g.usBase>0 ? Math.max(0,Math.round((1-us.usd/g.usBase)*100)) : 0);
+    const entries=Object.entries(g.prices);
+    let best=entries[0];
+    for(const e of entries){ if(e[1].usd<best[1].usd) best=e; }
+    g.bestCC=best[0]; g.bestUSD=best[1].usd;
+    g.usSaving=+(us.usd-g.bestUSD).toFixed(2);
+    g.usSavPct=us.usd>0?Math.round((g.usSaving/us.usd)*100):0;
+    let score=g.disc*2;
+    if(g.atlDisc&&g.disc>0){
+      const gapToATL=g.atlDisc-g.disc;
+      if(gapToATL<=0) score+=40;
+      else if(gapToATL<=10) score+=25;
+      else if(gapToATL<=20) score+=10;
+    }
+    g.dealScore=score;
+  });
+}
+
+/* ---------- UI ---------- */
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+const fmtT=iso=>iso?new Date(iso).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'';
+const REG_META={us:{label:'🇺🇸 US'},br:{label:'🇧🇷 Brazil'},pk:{label:'🇵🇰 Pakistan'},ua:{label:'🇺🇦 Ukraine'}};
+const vOrder={free:0,buy:1,watch:2,wait:3};
+const vClass=v=>v==='buy'?'v-buy':v==='wait'?'v-wait':v==='watch'?'v-watch':'v-free';
+const rFlag=cc=>cc==='br'?'p-brl':cc==='pk'?'p-pkr':cc==='ua'?'p-uah':'p-none';
+
+function buildStatus(){
+  let live=0,total=0;
+  state.games.forEach(g=>Object.values(g.prices).forEach(p=>{total++;if(p.src==='live')live++;}));
+  const r=state.rates;
+  document.getElementById('statusBar').innerHTML=
+    'Rates: '+(r.src==='live'?('🟢 live'+(r.at?' '+fmtT(r.at):'')):('⚪ '+r.src))+' — 1 USD = '+r.BRL.toFixed(2)+' BRL · '+r.UAH.toFixed(2)+' UAH · PK = SASIA-USD &nbsp;·&nbsp; '+
+    'Prices: '+live+'/'+total+' live &nbsp;·&nbsp; Last full refresh: '+(state.lastRefresh?fmtT(state.lastRefresh):'never — using manual estimates')+' &nbsp;·&nbsp; Ranked by discount';
+}
+function buildSummary(){
+  const G=state.games;
+  const tUS=G.reduce((s,g)=>s+g.prices.us.usd,0);
+  const tBest=G.reduce((s,g)=>s+g.bestUSD,0);
+  const c=v=>G.filter(g=>g.verdict===v).length;
+  document.getElementById('sg').innerHTML=
+    '<div class="metric"><div class="ml">Games</div><div class="mv">'+G.length+'</div></div>'+
+    '<div class="metric"><div class="ml">🟢 Buy now</div><div class="mv" style="color:#a4d65e;">'+c('buy')+'</div></div>'+
+    '<div class="metric"><div class="ml">✅ Check Epic</div><div class="mv" style="color:#a4d65e;">'+c('free')+'</div></div>'+
+    '<div class="metric"><div class="ml">🟣 Watch Epic</div><div class="mv" style="color:#a59ff0;">'+c('watch')+'</div></div>'+
+    '<div class="metric"><div class="ml">On sale (US)</div><div class="mv">'+G.filter(g=>g.disc>0).length+'</div></div>'+
+    '<div class="metric"><div class="ml">US total</div><div class="mv">$'+tUS.toFixed(0)+'</div></div>'+
+    '<div class="metric"><div class="ml">Cheapest total</div><div class="mv" style="color:#a4d65e;">$'+tBest.toFixed(0)+'</div></div>'+
+    '<div class="metric"><div class="ml">You save</div><div class="mv" style="color:#a4d65e;">$'+(tUS-tBest).toFixed(0)+'</div></div>';
+}
+function sf(f,btn){cf=f;document.querySelectorAll('#filterbar .fb').forEach(b=>b.classList.remove('active'));btn.classList.add('active');render();}
+function ssort(s){cs=s;render();}
+function toggleEdit(id){document.getElementById('ep-'+id).classList.toggle('open');}
+
+function render(){
+  let G=[...state.games];
+  if(cf!=='all') G=G.filter(g=>g.verdict===cf);
+  if(cs==='deal') G.sort((a,b)=>b.dealScore-a.dealScore||a.bestUSD-b.bestUSD);
+  else if(cs==='cheapest') G.sort((a,b)=>a.bestUSD-b.bestUSD);
+  else if(cs==='savings') G.sort((a,b)=>b.usSaving-a.usSaving);
+  else if(cs==='verdict') G.sort((a,b)=>vOrder[a.verdict]-vOrder[b.verdict]||a.priority-b.priority);
+  else G.sort((a,b)=>a.name.localeCompare(b.name));
+
+  const showRank=(cs==='deal'&&cf==='all');
+
+  document.getElementById('gl').innerHTML=G.map((g,idx)=>{
+    const dCol=g.disc>=50?'#79a83a':g.disc>=25?'#5b9bd5':g.disc>0?'#d09a3e':'var(--color-border-secondary)';
+    const dealCls=g.disc>=50?'p-buy':g.disc>=25?'p-wait':'p-none';
+    const vLabel=g.verdict==='free'?'✅ Check Epic':g.verdict==='buy'?'🟢 Buy now':g.verdict==='watch'?'🟣 Watch Epic':'🟡 Wait for sale';
+    const atlGap=(g.atlDisc&&g.disc>0)?g.atlDisc-g.disc:null;
+    const dealNote=g.disc>0?(atlGap!==null?(atlGap<=0?'at all-time low':atlGap<=10?'near all-time low':atlGap+' pts above ATL'):''):'';
+
+    const atlHTML=(g.atl&&g.atlDisc)?
+      '<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--color-text-secondary);margin-bottom:2px;">'+
+        '<span>Base $'+(g.usBase||0).toFixed(2)+'</span><span>ATL $'+g.atl+' (−'+g.atlDisc+'%)</span></div>'+
+      '<div class="atl-bar">'+
+        '<div class="atl-fill" style="width:'+Math.min(g.atlDisc,100)+'%;background:'+dCol+';opacity:.35;"></div>'+
+        (g.disc>0?'<div class="atl-marker" style="left:'+Math.min(g.disc,100)+'%;"></div>':'')+
+      '</div>'+
+      '<div style="font-size:10px;color:var(--color-text-secondary);margin-top:2px;">'+(g.disc>0?('Now: −'+g.disc+'% · '):'')+'ATL: −'+g.atlDisc+'%'+(g.prices.us.usd<=g.atl?' ✓ at ATL':'')+'</div>'
+      :'<div style="font-size:11px;color:var(--color-text-secondary);">No sale history yet</div>';
+
+    const rows=['us','br','pk','ua'].map(cc=>{
+      const p=g.prices[cc]; if(!p) return '';
+      const best=cc===g.bestCC;
+      const vs=cc!=='us'?(p.usd<g.prices.us.usd?('−'+Math.round((1-p.usd/g.prices.us.usd)*100)+'%'):'= US'):'';
+      return '<div class="reg-row">'+
+        '<span class="src-dot '+(p.src==='live'?'src-live':'src-man')+'" title="'+(p.src==='live'?('Live from Steam '+fmtT(p.at)):'Manual / estimate')+'"></span>'+
+        '<span style="min-width:84px;font-weight:'+(best?'600':'400')+';color:'+(best?'var(--color-text-primary)':'var(--color-text-secondary)')+';">'+REG_META[cc].label+(best?' ✓':'')+'</span>'+
+        '<span style="flex:1;font-size:10px;color:var(--color-text-secondary);">'+esc(p.local)+'</span>'+
+        '<span style="font-weight:'+(best?'600':'400')+';color:'+(best?'#a4d65e':'var(--color-text-secondary)')+';">$'+p.usd.toFixed(2)+'</span>'+
+        '<span style="width:36px;text-align:right;font-size:10px;color:var(--color-text-secondary);">'+vs+'</span>'+
+      '</div>';
+    }).join('');
+
+    const hero=g.usSaving>0.5
+      ?'<div style="display:flex;align-items:baseline;gap:6px;justify-content:flex-end;flex-wrap:wrap;">'+
+          '<span style="font-size:22px;font-weight:600;color:#a4d65e;">$'+g.bestUSD.toFixed(2)+'</span>'+
+          '<span style="font-size:12px;color:var(--color-text-secondary);text-decoration:line-through;">$'+g.prices.us.usd.toFixed(2)+' US</span></div>'+
+        '<span class="pill '+rFlag(g.bestCC)+'">'+REG_META[g.bestCC].label+' cheapest</span>'
+      :'<span style="font-size:22px;font-weight:600;color:var(--color-text-primary);">$'+g.bestUSD.toFixed(2)+'</span>'+
+        '<div style="font-size:10px;color:var(--color-text-secondary);">same across regions</div>';
+
+    const brRaw=g.prices.br.raw!=null?g.prices.br.raw:+(g.prices.br.usd*state.rates.BRL).toFixed(2);
+    const uaRaw=g.prices.ua.raw!=null?g.prices.ua.raw:+(g.prices.ua.usd*state.rates.UAH).toFixed(2);
+
+    return '<div class="card '+vClass(g.verdict)+'">'+
+      '<div class="card-actions">'+
+        (g.appId?'<button class="mini-btn" onclick="refreshGame('+g.id+')" title="Fetch live prices for this game">↻</button>':'')+
+        '<button class="mini-btn" onclick="toggleEdit('+g.id+')">✏</button>'+
+      '</div>'+
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;margin-bottom:6px;padding-right:78px;">'+
+        '<div style="flex:1;min-width:0;">'+
+          '<div style="font-size:14px;font-weight:500;color:var(--color-text-primary);margin-bottom:4px;">'+
+            (showRank?'<span class="rank-badge">#'+(idx+1)+'</span>':'')+esc(g.name)+
+          '</div>'+
+          '<span class="pill '+dealCls+'">'+(g.disc>0?('−'+g.disc+'% off'):'Full price')+'</span>'+
+          (dealNote?'<span class="pill '+(atlGap<=10?'p-buy':'p-none')+'">'+dealNote+'</span>':'')+
+          '<span class="pill p-none">'+vLabel+'</span>'+
+        '</div>'+
+        '<div style="flex-shrink:0;text-align:right;">'+hero+'</div>'+
+      '</div>'+
+      '<div class="grid3">'+
+        '<div class="sec"><div class="sec-lbl">Sale depth vs ATL</div>'+atlHTML+'</div>'+
+        '<div class="sec"><div class="sec-lbl">All accounts</div>'+rows+
+          (g.usSaving>0.5?'<div style="font-size:10px;color:#a4d65e;margin-top:4px;font-weight:500;">Best saves $'+g.usSaving.toFixed(2)+' ('+g.usSavPct+'%) vs US</div>':'')+'</div>'+
+        '<div class="sec"><div class="sec-lbl">Strategy</div>'+
+          '<div style="font-size:11px;color:var(--color-text-secondary);line-height:1.5;margin-bottom:4px;">'+esc(g.action)+'</div>'+
+          '<div style="font-size:10px;color:var(--color-text-secondary);font-style:italic;margin-bottom:4px;">'+esc(g.epicNote)+'</div>'+
+          '<div style="font-size:10px;color:var(--color-text-secondary);">📅 '+esc(g.nextSale)+'</div>'+
+          (g.appId?'<a href="https://steamdb.info/app/'+g.appId+'/" target="_blank" rel="noopener" style="font-size:11px;display:block;margin-top:5px;">SteamDB ↗</a>':'')+
+        '</div>'+
+      '</div>'+
+      '<div class="edit-panel" id="ep-'+g.id+'">'+
+        '<div style="font-size:11px;font-weight:500;color:var(--color-text-primary);margin-bottom:8px;">Edit (manual values override live until next refresh)</div>'+
+        '<div class="edit-row">'+
+          '<div><div class="edit-label">US price ($)</div><input class="edit-input" id="ef-'+g.id+'-usnow" value="'+g.prices.us.usd.toFixed(2)+'" type="number" step="0.01"></div>'+
+          '<div><div class="edit-label">US base ($)</div><input class="edit-input" id="ef-'+g.id+'-usbase" value="'+(g.usBase||0).toFixed(2)+'" type="number" step="0.01"></div>'+
+          '<div><div class="edit-label">Brazil (R$)</div><input class="edit-input" id="ef-'+g.id+'-brl" value="'+brRaw+'" type="number" step="0.01"></div>'+
+          '<div><div class="edit-label">Pakistan ($, SASIA)</div><input class="edit-input" id="ef-'+g.id+'-pk" value="'+g.prices.pk.usd.toFixed(2)+'" type="number" step="0.01"></div>'+
+          '<div><div class="edit-label">Ukraine (₴)</div><input class="edit-input" id="ef-'+g.id+'-uah" value="'+uaRaw+'" type="number" step="0.01"></div>'+
+          '<div><div class="edit-label">All-time low ($)</div><input class="edit-input" id="ef-'+g.id+'-atl" value="'+(g.atl||'')+'" type="number" step="0.01"></div>'+
+          '<div><div class="edit-label">ATL discount (%)</div><input class="edit-input" id="ef-'+g.id+'-atldisc" value="'+(g.atlDisc||'')+'" type="number"></div>'+
+          '<div><div class="edit-label">Verdict</div>'+
+            '<select class="edit-select" id="ef-'+g.id+'-verdict">'+
+              '<option value="wait" '+(g.verdict==='wait'?'selected':'')+'>🟡 Wait for sale</option>'+
+              '<option value="buy" '+(g.verdict==='buy'?'selected':'')+'>🟢 Buy now</option>'+
+              '<option value="watch" '+(g.verdict==='watch'?'selected':'')+'>🟣 Watch Epic</option>'+
+              '<option value="free" '+(g.verdict==='free'?'selected':'')+'>✅ Check Epic library</option>'+
+            '</select></div>'+
+        '</div>'+
+        '<div style="margin-bottom:6px;"><div class="edit-label">Epic / free note</div><input class="edit-input" id="ef-'+g.id+'-epic" value="'+esc(g.epicNote)+'"></div>'+
+        '<div style="margin-bottom:6px;"><div class="edit-label">Next sale prediction</div><input class="edit-input" id="ef-'+g.id+'-nextsale" value="'+esc(g.nextSale)+'"></div>'+
+        '<div style="margin-bottom:8px;"><div class="edit-label">Action / strategy</div><input class="edit-input" id="ef-'+g.id+'-action" value="'+esc(g.action)+'"></div>'+
+        '<button class="save-btn" onclick="saveCard('+g.id+')">Save</button>'+
+        '<button class="del-btn" onclick="deleteGame('+g.id+')">Remove game</button>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+/* ---------- edit / add / delete ---------- */
+async function saveCard(id){
+  const g=state.games.find(x=>x.id===id); if(!g) return;
+  const num=(f,fb)=>{const el=document.getElementById('ef-'+id+'-'+f);const v=el?parseFloat(el.value):NaN;return isNaN(v)?fb:v;};
+  const str=(f,fb)=>{const el=document.getElementById('ef-'+id+'-'+f);return el&&el.value?el.value:fb;};
+  const setIf=(p,usd,local,raw)=>{ if(Math.abs(p.usd-usd)>0.001){Object.assign(p,{usd,local,raw,src:'manual',at:null});} };
+  const usV=num('usnow',g.prices.us.usd);
+  setIf(g.prices.us, +usV.toFixed(2), '$'+usV.toFixed(2), usV);
+  g.usBase=num('usbase',g.usBase);
+  const brR=num('brl',g.prices.br.raw||0);
+  setIf(g.prices.br, +(brR/state.rates.BRL).toFixed(2), 'R$'+brR.toFixed(2), brR);
+  const pkV=num('pk',g.prices.pk.usd);
+  setIf(g.prices.pk, +pkV.toFixed(2), '$'+pkV.toFixed(2), pkV);
+  const uaR=num('uah',g.prices.ua.raw||0);
+  setIf(g.prices.ua, +(uaR/state.rates.UAH).toFixed(2), '₴'+uaR, uaR);
+  g.atl=num('atl',g.atl)||null; g.atlDisc=num('atldisc',g.atlDisc)||null;
+  g.verdict=str('verdict',g.verdict); g.epicNote=str('epic',g.epicNote);
+  g.nextSale=str('nextsale',g.nextSale); g.action=str('action',g.action);
+  await saveState(); computeAll(); buildSummary(); buildStatus(); render();
+}
+async function deleteGame(id){
+  if(!confirm('Remove this game from your wishlist?')) return;
+  state.games=state.games.filter(g=>g.id!==id);
+  await saveState(); computeAll(); buildSummary(); buildStatus(); render();
+}
+function openAddModal(){document.getElementById('addModal').classList.add('open');}
+function closeAddModal(){document.getElementById('addModal').classList.remove('open');}
+async function addGame(){
+  const name=document.getElementById('add-name').value.trim();
+  if(!name){alert('Game name required');return;}
+  const appId=parseInt(document.getElementById('add-appid').value)||null;
+  const usNow=parseFloat(document.getElementById('add-usnow').value)||0;
+  const usBase=parseFloat(document.getElementById('add-usbase').value)||usNow;
+  const sasia=document.getElementById('add-sasia').value==='yes';
+  const id=Math.max(0,...state.games.map(g=>g.id))+1;
+  state.games.push({
+    id,name,appId,usBase,priority:id,sasiaOptIn:sasia,
+    atl:parseFloat(document.getElementById('add-atl').value)||null,
+    atlDisc:parseInt(document.getElementById('add-atldisc').value)||null,
+    verdict:document.getElementById('add-verdict').value,
+    epicNote:document.getElementById('add-epic').value||'No Epic history',
+    nextSale:document.getElementById('add-nextsale').value||'Check SteamDB',
+    action:document.getElementById('add-action').value||'Verify price on SteamDB',
+    prices:{
+      us:{usd:usNow,local:'$'+usNow.toFixed(2),src:'manual',at:null},
+      br:{usd:usNow,local:'Not set',src:'manual',at:null,raw:usNow*state.rates.BRL},
+      pk:{usd:usNow,local:'$'+usNow.toFixed(2),src:'manual',at:null,raw:usNow},
+      ua:{usd:usNow,local:'Not set',src:'manual',at:null,raw:usNow*state.rates.UAH}
+    }
+  });
+  await saveState(); computeAll(); buildSummary(); buildStatus(); render(); closeAddModal();
+  ['name','appid','usnow','usbase','atl','atldisc','epic','nextsale','action'].forEach(f=>{const el=document.getElementById('add-'+f);if(el)el.value='';});
+  if(appId) refreshGame(id);
+}
+
+/* ---------- init ---------- */
+(async function init(){
+  await loadState();
+  computeAll(); buildSummary(); buildStatus(); render();
+  const stale=!state.lastRefresh||(Date.now()-new Date(state.lastRefresh).getTime())>60*60*1000;
+  fetchRates().then(()=>{buildStatus();});
+  if(stale) refreshAll();
+})();
+</script>
+</body>
+</html>
