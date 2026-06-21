@@ -199,7 +199,7 @@ function seedToGames(){
 /* ---------- persistence ---------- */
 async function loadState(){
   try{
-    const r = await storage.get('wishlist-v3');
+    const r = await storage.get('wishlist-v4');
     state = JSON.parse(r.value);
     if(!state.rates) state.rates = {...DEF_RATES};
     return;
@@ -208,7 +208,7 @@ async function loadState(){
   await saveState();
 }
 async function saveState(){
-  try{ await storage.set('wishlist-v3', JSON.stringify(state)); }catch(e){ console.error('save failed',e); }
+  try{ await storage.set('wishlist-v4', JSON.stringify(state)); }catch(e){ console.error('save failed',e); }
 }
 
 /* ---------- networking with proxy fallbacks ---------- */
@@ -268,6 +268,13 @@ function applyLive(g, cc, po){
   const sym=po.currency==='BRL'?'R$':po.currency==='UAH'?'₴':'$';
   g.prices[cc]={usd, local:(po.final_formatted||sym+amount.toFixed(2)), src:'live', at:new Date().toISOString(), raw:amount, disc:po.discount_percent||0};
   if(cc==='us'&&po.initial){ g.usBase=+(po.initial/100).toFixed(2); }
+  // Auto-track all-time low from observed US prices: ATL only ever ratchets downward.
+  if(cc==='us'){
+    const curDisc=po.discount_percent||0;
+    const curPrice=amount;
+    if(g.atl==null || curPrice < g.atl){ g.atl=+curPrice.toFixed(2); g.atlObserved=true; }
+    if(g.atlDisc==null || curDisc > g.atlDisc){ g.atlDisc=curDisc; g.atlObserved=true; }
+  }
 }
 async function refreshRegion(cc, games){
   const ids=games.filter(g=>g.appId).map(g=>g.appId).join(',');
@@ -408,7 +415,7 @@ function render(){
         '<div class="atl-fill" style="width:'+Math.min(g.atlDisc,100)+'%;background:'+dCol+';opacity:.35;"></div>'+
         (g.disc>0?'<div class="atl-marker" style="left:'+Math.min(g.disc,100)+'%;"></div>':'')+
       '</div>'+
-      '<div style="font-size:10px;color:var(--color-text-secondary);margin-top:2px;">'+(g.disc>0?('Now: −'+g.disc+'% · '):'')+'ATL: −'+g.atlDisc+'%'+(g.prices.us.usd<=g.atl?' ✓ at ATL':'')+'</div>'
+      '<div style="font-size:10px;color:var(--color-text-secondary);margin-top:2px;">'+(g.disc>0?('Now: −'+g.disc+'% · '):'')+'ATL: −'+g.atlDisc+'%'+(g.atlObserved?' 🟢':'')+(g.prices.us.usd<=g.atl?' ✓ at ATL':'')+'</div>'
       :'<div style="font-size:11px;color:var(--color-text-secondary);">No sale history yet</div>';
 
     const rows=['us','br','pk','ua'].map(cc=>{
