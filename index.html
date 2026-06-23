@@ -239,6 +239,67 @@ async function fetchJSON(target){
   return null;
 }
 
+/* ---------- ITAD true ATL lookup ---------- */
+const ITAD_KEY = 'b9ada7b3c598b1c57768df3d3de68d9758268147';
+
+async function postJSON(target, body){
+  const enc = encodeURIComponent(target);
+  const attempts = [
+    target,
+    'https://corsproxy.io/?url=' + enc,
+    'https://api.allorigins.win/raw?url=' + enc,
+  ];
+  for(const u of attempts){
+    try{
+      const r = await tFetch(u, 12000);
+      if(!r || !r.ok) continue;
+      // allorigins wraps in {contents}
+      let txt = await r.text();
+      try{ const j=JSON.parse(txt); if(j && j.contents) txt=j.contents; }catch(e){}
+      const data = JSON.parse(txt);
+      if(data && typeof data === 'object') return data;
+    }catch(e){}
+  }
+  return null;
+}
+
+async function fetchTrueATL(g){
+  if(!g.appId || !ITAD_KEY) return false;
+  try{
+    // Step 1: resolve Steam App ID → ITAD game ID
+    const look = await fetchJSON(
+      'https://api.isthereanydeal.com/games/lookup/v1?key=' + ITAD_KEY + '&appid=' + g.appId
+    );
+    const gid = look && look.found && look.game && look.game.id;
+    if(!gid) return false;
+
+    // Step 2: fetch Steam-store historical low via storelow endpoint
+    const data = await postJSON(
+      'https://api.isthereanydeal.com/games/storelow/v2?key=' + ITAD_KEY + '&country=US&shops=61',
+      [gid]
+    );
+    if(!data || !Array.isArray(data) || !data[0]) return false;
+    const lows = data[0].lows;
+    if(!lows || !lows.length) return false;
+    const low = lows[0];
+    if(low && low.price && typeof low.price.amount === 'number'){
+      const atlPrice = +low.price.amount.toFixed(2);
+      const atlCut   = typeof low.cut === 'number' ? low.cut : null;
+      // Only update if ITAD value is lower than what we have (or we have nothing)
+      if(g.atl == null || atlPrice < g.atl){
+        g.atl = atlPrice;
+        g.atlObserved = true;
+      }
+      if(atlCut !== null && (g.atlDisc == null || atlCut > g.atlDisc)){
+        g.atlDisc = atlCut;
+        g.atlObserved = true;
+      }
+      return true;
+    }
+  }catch(e){ console.warn('ITAD ATL error', g.name, e); }
+  return false;
+}
+
 /* ---------- live rates ---------- */
 async function fetchRates(){
   const sources=['https://open.er-api.com/v6/latest/USD','https://api.exchangerate-api.com/v4/latest/USD'];
@@ -305,6 +366,14 @@ async function refreshAll(){
     if(!res.reached) unreachable.push(label);
     totalOk+=res.ok;
     await new Promise(r=>setTimeout(r,400));
+  }
+  // Fetch true historical ATL from ITAD for every game (Steam store only)
+  if(ITAD_KEY){
+    st.innerHTML='<span class="spin"></span>Fetching true ATL from ITAD…';
+    for(const g of state.games){
+      await fetchTrueATL(g);
+      await new Promise(r=>setTimeout(r,350)); // stay well under rate limit
+    }
   }
   state.lastRefresh=new Date().toISOString();
   await saveState();
