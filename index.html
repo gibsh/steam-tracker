@@ -263,29 +263,25 @@ async function postJSON(target, body){
   return null;
 }
 
+const WORKER_URL = 'https://itad-proxy.cloudflare-sustainer558.workers.dev';
+
+async function itadFetch(itadPath){
+  const target = encodeURIComponent('https://api.isthereanydeal.com' + itadPath);
+  const r = await tFetch(WORKER_URL + '?target=' + target, 12000);
+  if(r && r.ok) return await r.json();
+  return null;
+}
+
 async function fetchTrueATL(g){
   if(!g.appId || !ITAD_KEY) return false;
   try{
     // Step 1: resolve Steam App ID → ITAD game ID
-    const look = await fetchJSON(
-      'https://api.isthereanydeal.com/games/lookup/v1?key=' + ITAD_KEY + '&appid=' + g.appId
-    );
+    const look = await itadFetch('/games/lookup/v1?key=' + ITAD_KEY + '&appid=' + g.appId);
     const gid = look && look.found && look.game && look.game.id;
     if(!gid) return false;
 
-    // Step 2: fetch true all-time historical low (try direct first, then proxies)
-    const itadUrl = 'https://api.isthereanydeal.com/games/historylow/v1?key=' + ITAD_KEY + '&country=US&shops=61&ids=' + encodeURIComponent(gid);
-    let data = null;
-
-    // Try direct (works if CORS allowed or Brave shields off)
-    try{
-      const r = await tFetch(itadUrl, 10000);
-      if(r && r.ok) data = await r.json();
-    }catch(e){}
-
-    // Fallback: try proxies
-    if(!data) data = await fetchJSON(itadUrl);
-
+    // Step 2: fetch true all-time historical low via Worker proxy
+    const data = await itadFetch('/games/historylow/v1?key=' + ITAD_KEY + '&country=US&shops=61&ids=' + encodeURIComponent(gid));
     if(!data || !Array.isArray(data) || !data[0]) return false;
     const low = data[0].low;
     if(low && low.price && typeof low.price.amount === 'number'){
