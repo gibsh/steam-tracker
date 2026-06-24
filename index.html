@@ -273,15 +273,13 @@ async function fetchTrueATL(g){
     const gid = look && look.found && look.game && look.game.id;
     if(!gid) return false;
 
-    // Step 2: fetch Steam-store historical low via storelow endpoint
+    // Step 2: fetch true all-time historical low via historylow endpoint, filtered to Steam (shop 61)
     const data = await postJSON(
-      'https://api.isthereanydeal.com/games/storelow/v2?key=' + ITAD_KEY + '&country=US&shops=61',
+      'https://api.isthereanydeal.com/games/historylow/v1?key=' + ITAD_KEY + '&country=US&shops=61',
       [gid]
     );
     if(!data || !Array.isArray(data) || !data[0]) return false;
-    const lows = data[0].lows;
-    if(!lows || !lows.length) return false;
-    const low = lows[0];
+    const low = data[0].low;
     if(low && low.price && typeof low.price.amount === 'number'){
       const atlPrice = +low.price.amount.toFixed(2);
       const atlCut   = typeof low.cut === 'number' ? low.cut : null;
