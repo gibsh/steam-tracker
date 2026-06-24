@@ -265,9 +265,14 @@ async function postJSON(target, body){
 
 const WORKER_URL = 'https://itad-proxy.cloudflare-sustainer558.workers.dev';
 
-async function itadFetch(itadPath){
-  const target = encodeURIComponent('https://api.isthereanydeal.com' + itadPath);
-  const r = await tFetch(WORKER_URL + '?target=' + target, 12000);
+async function itadGet(path){
+  const r = await tFetch(WORKER_URL + '?path=' + encodeURIComponent(path), 12000);
+  if(r && r.ok) return await r.json();
+  return null;
+}
+
+async function itadPost(path, body){
+  const r = await tFetch(WORKER_URL + '?path=' + encodeURIComponent(path) + '&body=' + encodeURIComponent(JSON.stringify(body)), 12000);
   if(r && r.ok) return await r.json();
   return null;
 }
@@ -276,12 +281,12 @@ async function fetchTrueATL(g){
   if(!g.appId || !ITAD_KEY) return false;
   try{
     // Step 1: resolve Steam App ID → ITAD game ID
-    const look = await itadFetch('/games/lookup/v1?key=' + ITAD_KEY + '&appid=' + g.appId);
+    const look = await itadGet('/games/lookup/v1?key=' + ITAD_KEY + '&appid=' + g.appId);
     const gid = look && look.found && look.game && look.game.id;
     if(!gid) return false;
 
-    // Step 2: fetch true all-time historical low via Worker proxy
-    const data = await itadFetch('/games/historylow/v1?key=' + ITAD_KEY + '&country=US&shops=61&ids=' + encodeURIComponent(gid));
+    // Step 2: fetch true all-time historical low via POST
+    const data = await itadPost('/games/historylow/v1?key=' + ITAD_KEY + '&country=US&shops=61', [gid]);
     if(!data || !Array.isArray(data) || !data[0]) return false;
     const low = data[0].low;
     if(low && low.price && typeof low.price.amount === 'number'){
