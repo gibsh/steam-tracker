@@ -286,7 +286,7 @@ async function fetchTrueATL(g){
     if(!gid) return false;
 
     // Step 2: fetch true all-time historical low via POST
-    const data = await itadPost('/games/historylow/v1?key=' + ITAD_KEY + '&country=US&shops=61', [gid]);
+    const data = await itadPost('/games/historylow/v1?key=' + ITAD_KEY + '&country=US', [gid]);
     if(!data || !Array.isArray(data) || !data[0]) return false;
     const low = data[0].low;
     if(low && low.price && typeof low.price.amount === 'number'){
